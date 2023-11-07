@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="text-white bg-slate-900">
+    <div class="fixed top-0 z-50 left-0 right-0 h-12 w-full text-center bg-black bg-opacity-50 flex justify-center items-center">
+        <h1 class="text-2xl">Chat Room #1</h1>
+    </div>
+
+    <div class="w-2/4 bg-black bg-opacity-20 h-screen overflow-y-scroll translate-x-2/4 flex flex-col-reverse">
+        <form class="" onsubmit="sendMessage(event)">
+            <input required class="bg-white bg-opacity-5 w-fit ml-2 px-4 py-1 rounded-md focus:outline-none" placeholder="Syötä nimi..." type="text" name="name" id="">
+            <div class="pl-1 pr-4 py-1 m-2 rounded-md bg-white bg-opacity-10 text-white mb-6 flex items-center">
+                <button class="mr-2 p-1 bg-black bg-opacity-50 rounded-md">
+                    <img height="20px" width="30" src="./images/send.svg" alt="send button">
+                </button>
+                <input required class="bg-transparent w-full focus:outline-none" placeholder="Kirjoita viesti..." type="text" name="content" id="">
+            </div>
+        </form>
+        <div id="messages">
+
+        </div>
+    </div>
+
+    <script defer>
+        const fetchLatest = async () => {
+            const messages = document.getElementById("messages");
+                
+            const latestMessage = messages.lastChild;
+
+            const response = await fetch(`http://localhost:3000/api/chat/id?id=${latestMessage.id}`);
+
+            if (!response.ok) return alert("Something went wrong!");
+
+            const res = await response.json();
+            res.forEach(message => {
+                const div = document.createElement("div");
+
+                div.innerHTML = `
+                    <h3 class="flex items-center">
+                        <b>${message.author}</b> 
+                        <span class="ml-auto mr-2">${message.timestamp}</span>
+                        <button onclick="deleteMessage(${message.id})" class="mr-2 p-1 bg-black bg-opacity-50 rounded-md">
+                            <img width="20" src="./images/trash.svg" alt="trash button">
+                        </button>
+                    </h3>
+                    <p>${message.content}</p>
+                `;
+                div.id=message.id;
+                div.className = "px-4 py-2 m-2 rounded-sm bg-white bg-opacity-10 text-white";
+
+                messages.appendChild(div);
+            });
+
+            return;
+        }
+
+        const sendMessage = async (event) => {
+            event.preventDefault();
+            
+            await fetchLatest();
+
+            const elements = event.target.elements;
+
+            const date = new Date();
+
+            const data = {
+                timestamp: `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`,
+                content: elements[2].value,
+                author: elements[0].value,
+            };
+
+            const options = {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            };
+
+            const response = await fetch("http://localhost:3000/api/chat", options);
+
+            if (!response.ok) return alert("Something went wrong.");
+
+            const messages = document.getElementById("messages");
+
+            const div = document.createElement("div");
+
+            const message = await response.json();
+
+            div.innerHTML = `
+                    <h3 class="flex items-center">
+                        <b>${message.author}</b> 
+                        <span class="ml-auto mr-2">${message.timestamp}</span>
+                        <button onclick="deleteMessage(${message.id})" class="mr-2 p-1 bg-black bg-opacity-50 rounded-md">
+                            <img width="20" src="./images/trash.svg" alt="trash button">
+                        </button>
+                    </h3>
+                    <p>${message.content}</p>
+                `;
+            div.className = "px-4 py-2 m-2 rounded-sm bg-white bg-opacity-10 text-white";
+            div.id=message.id;
+
+            messages.appendChild(div);
+        };
+
+        const deleteMessage = async (id) => {
+            const options = {
+                method: "DELETE",
+            };
+
+            const response = await fetch(`http://localhost:3000/api/chat/id?id=${id}`, options);
+
+            if (!response.ok) return alert("Something went wrong!");        
+
+            location.reload();
+        };
+
+        const main = async () => {
+            const response = await fetch("http://localhost:3000/api/chat");
+
+            if (!response.ok) return alert("Something went wrong!");
+
+            const res = await response.json();
+            const messages = document.getElementById("messages");
+
+            res.forEach(message => {
+                const div = document.createElement("div");
+
+                div.innerHTML = `
+                    <h3 class="flex items-center">
+                        <b>${message.author}</b> 
+                        <span class="ml-auto mr-2">${message.timestamp}</span>
+                        <button onclick="deleteMessage(${message.id})" class="mr-2 p-1 bg-black bg-opacity-50 rounded-md">
+                            <img width="20" src="./images/trash.svg" alt="trash button">
+                        </button>
+                    </h3>
+                    <p>${message.content}</p>
+                `;
+                div.id=message.id;
+                div.className = "px-4 py-2 m-2 rounded-sm bg-white bg-opacity-10 text-white";
+
+                messages.appendChild(div);
+            });
+
+            setInterval(async () => {
+                await fetchLatest()
+            }, 1000);
+        };
+
+        main();
+    </script>
+</body>
+</html>
